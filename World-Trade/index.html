@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Trade – Free Buffer</title>
+  <style>
+    body {
+      background: #0a0a1a;
+      color: #eee;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 2rem;
+      margin: 0;
+    }
+    .container { max-width: 700px; width: 100%; }
+    h1 { font-weight: 300; text-align: center; }
+    h1 span { background: linear-gradient(to right, #38bdf8, #2dd4bf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 24px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    label { display: block; font-size: 0.8rem; opacity: 0.6; margin-bottom: 0.2rem; }
+    input, textarea {
+      width: 100%;
+      padding: 0.7rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: #eee;
+      font-size: 1rem;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    textarea { min-height: 100px; }
+    input:focus, textarea:focus { outline: none; border-color: #38bdf8; }
+    .btn {
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 40px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 100%;
+      font-size: 1.1rem;
+    }
+    .btn:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(14,165,233,0.3); }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+    .status {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid #2dd4bf;
+      display: none;
+    }
+    .status.show { display: block; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .mini-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 30px;
+      padding: 0.3rem 0.8rem;
+      color: #ccc;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: 0.2s;
+      text-align: center;
+    }
+    .mini-btn:hover { background: rgba(14,165,233,0.2); border-color: #0ea5e9; color: white; }
+    .note { font-size: 0.75rem; opacity: 0.4; margin-top: 0.5rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>The <span>World Trade</span> Buffer</h1>
+  <p style="text-align:center; opacity:0.5;">Write once → Post everywhere (for free)</p>
+
+  <div class="card">
+    <label>✏️ Your post</label>
+    <textarea id="postText" placeholder="What's happening?">Just launched my digital universe! 🌍</textarea>
+  </div>
+
+  <div class="card">
+    <label>🖼️ Image URL (optional)</label>
+    <input type="text" id="imageUrl" placeholder="https://example.com/image.jpg" />
+  </div>
+
+  <div class="card">
+    <button class="btn" id="publishBtn">🚀 Publish to All Networks</button>
+    <div class="status" id="statusBox"></div>
+    <div class="note">Auto‑posts to Bluesky, Mastodon, Telegram. Opens tabs for X, FB, LinkedIn, Threads.</div>
+  </div>
+
+  <div class="card" style="border-color: rgba(45,212,191,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.9rem;">⚙️ One‑click to each network</span>
+    </div>
+    <div class="grid-2" id="manualButtons">
+      <div class="mini-btn" data-platform="bluesky">☁️ Bluesky</div>
+      <div class="mini-btn" data-platform="mastodon">🐘 Mastodon</div>
+      <div class="mini-btn" data-platform="telegram">✈️ Telegram</div>
+      <div class="mini-btn" data-platform="twitter">🐦 X</div>
+      <div class="mini-btn" data-platform="facebook">📘 FB</div>
+      <div class="mini-btn" data-platform="linkedin">💼 LinkedIn</div>
+      <div class="mini-btn" data-platform="threads">🧵 Threads</div>
+      <div class="mini-btn" data-platform="copy">📋 Copy</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // DOM Elements
+  // ============================================================
+  const postText = document.getElementById('postText');
+  const imageUrl = document.getElementById('imageUrl');
+  const publishBtn = document.getElementById('publishBtn');
+  const statusBox = document.getElementById('statusBox');
+
+  function setStatus(msg, isError = false) {
+    statusBox.textContent = msg;
+    statusBox.style.borderLeftColor = isError ? '#f43f5e' : '#2dd4bf';
+    statusBox.classList.add('show');
+  }
+  function clearStatus() { statusBox.classList.remove('show'); }
+
+  // ============================================================
+  // SECURE API CALL (Your passwords are safe on Vercel!)
+  // ============================================================
+  async function callSecureApi(text, image, targetPlatform = null) {
+    const response = await fetch('/api/post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, image, platform: targetPlatform })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'API call failed');
+    }
+    return await response.json();
+  }
+
+  // ============================================================
+  // MAIN PUBLISH FUNCTION
+  // ============================================================
+  async function publishAll() {
+    const text = postText.value.trim() || 'Check out my universe!';
+    const image = imageUrl.value.trim();
+    
+    setStatus('⏳ Posting via secure server...');
+    publishBtn.disabled = true;
+
+    try {
+      const result = await callSecureApi(text, image, 'all');
+      const autoSuccess = result.filter(r => r.success).length;
+      setStatus(`✅ Auto-posted to ${autoSuccess}/${result.length} free networks. Opening tabs for the rest...`);
+      
+      // Open tabs for X, FB, LinkedIn, Threads
+      const baseUrl = window.location.origin;
+      const encodedText = encodeURIComponent(text);
+      const encodedUrl = encodeURIComponent(baseUrl);
+      window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
+      window.open(`https://linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
+      window.open(`https://threads.net/intent/post?text=${encodedText} ${encodedUrl}`, '_blank');
+
+    } catch (e) {
+      setStatus('❌ Error: ' + e.message, true);
+    }
+    publishBtn.disabled = false;
+  }
+
+  publishBtn.addEventListener('click', publishAll);
+
+  // ============================================================
+  // MANUAL SINGLE-PLATFORM BUTTONS
+  // ============================================================
+  document.querySelectorAll('.mini-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const platform = this.dataset.platform;
+      const text = postText.value.trim();
+      const image = imageUrl.value.trim();
+      const baseUrl = window.location.origin;
+
+      if (platform === 'copy') {
+        const full = text + ' ' + baseUrl;
+        navigator.clipboard.writeText(full).then(() => setStatus('📋 Copied to clipboard!'));
+        return;
+      }
+
+      // If it's an auto-platform (Bluesky, Mastodon, Telegram), call the secure API
+      if (['bluesky', 'mastodon', 'telegram'].includes(platform)) {
+        setStatus(`⏳ Posting to ${platform}...`);
+        try {
+          const result = await callSecureApi(text, image, platform);
+          if (result.success) setStatus(`✅ Posted to ${platform}!`);
+          else setStatus(`❌ Failed to post to ${platform}: ${result.error}`, true);
+        } catch (e) {
+          setStatus('❌ Error: ' + e.message, true);
+        }
+        return;
+      }
+
+      // For web intents (X, FB, LinkedIn, Threads)
+      const encodedText = encodeURIComponent(text);
+      const encodedUrl = encodeURIComponent(baseUrl);
+      let shareUrl = '';
+      switch (platform) {
+        case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`; break;
+        case 'facebook': shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`; break;
+        case 'linkedin': shareUrl = `https://linkedin.com/sharing/share-offsite/?url=${encodedUrl}`; break;
+        case 'threads': shareUrl = `https://threads.net/intent/post?text=${encodedText} ${encodedUrl}`; break;
+        default: return;
+      }
+      window.open(shareUrl, '_blank');
+      setStatus(`📤 Opened ${platform} share dialog.`);
+    });
+  });
+</script>
+</body>
+</html>
