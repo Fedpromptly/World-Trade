@@ -138,7 +138,15 @@ export default async function handler(req, res) {
   }
 
   // -----------------------------------------------
-  // 3. RETURN RESULTS
+  // 3. RETURN RESULTS (FIXED FOR FRONTEND COMPATIBILITY)
   // -----------------------------------------------
-  return res.status(200).json(results);
+  // If 'all' platforms were requested, return the full array.
+  if (platform === 'all') {
+    return res.status(200).json(results);
+  } 
+  // For single platform requests, return ONLY the first result object.
+  // This allows your frontend to check `result.success` directly.
+  else {
+    return res.status(200).json(results[0]);
+  }
 }
